@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { PrismaClient } from "@prisma/client";
-import { generateToken } from "../utils/jwt.util";
+import { generateAccessToken, generateRefreshToken ,verifyRefreshToken } from "../utils/jwt.util";
 import { sendVerificationEmail } from "../utils/mail.util";
 
 const prisma = new PrismaClient();
@@ -97,15 +97,33 @@ export class AuthService {
     }
 
     // Generate JWT token
-    const token = generateToken({ id: user.id, email: user.email });
+    const payload = { id: user.id, email: user.email };
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
 
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
       },
     };
+  }
+
+   async refreshAccessToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new Error("Missing refresh token");
+    }
+
+    const payload = verifyRefreshToken(refreshToken) as { id: string; email: string };
+
+    const newAccessToken = generateAccessToken({
+      id: payload.id,
+      email: payload.email,
+    });
+
+    return newAccessToken;
   }
 
   async verifyEmail(token: string) {
@@ -151,5 +169,10 @@ export class AuthService {
     await sendVerificationEmail(email, verificationToken);
 
     return { message: "Verification email sent" };
+  }
+
+   logout() {
+    // No logic needed here for cookie-based logout unless you're blacklisting tokens
+    return { message: "Logged out" };
   }
 }

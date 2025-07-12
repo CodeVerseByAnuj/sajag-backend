@@ -55,12 +55,19 @@ export class AuthController {
       const { email, password } = loginSchema.parse(req.body);
 
       const result = await authService.login(email, password);
-      // 🍪 Set token cookie here
-      res.cookie("token", result.token, {
+      // 🍪 Set access and refresh tokens in secure cookies
+      res.cookie("access_token", result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: 15 * 60 * 1000, // 15 mins
+      });
+
+      res.cookie("refresh_token", result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       res.json({ user: result.user });
@@ -75,6 +82,24 @@ export class AuthController {
       res.status(401).json({
         error: error.message || "Login failed",
       });
+    }
+  }
+
+  async refreshToken(req: Request, res: Response) {
+    try {
+      const refreshToken = req.cookies?.refresh_token;
+      const newAccessToken = await authService.refreshAccessToken(refreshToken);
+
+      res.cookie("access_token", newAccessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(403).json({ error: error.message || "Invalid refresh token" });
     }
   }
 
@@ -117,6 +142,30 @@ export class AuthController {
       res.status(400).json({
         error: error.message || "Failed to resend verification",
       });
+    }
+  }
+
+  async logout(req: Request, res: Response) {
+    try {
+      // Call the logout service (useful if you extend it later)
+      const result = authService.logout();
+
+      // Clear cookies
+      res.clearCookie("access_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      });
+
+      res.clearCookie("refresh_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      });
+
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Logout failed" });
     }
   }
 }

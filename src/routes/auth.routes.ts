@@ -11,6 +11,8 @@ router.use(authLimiter);
 router.post("/register", authController.register);
 router.post("/login", authController.login);
 router.get("/verify-email", authController.verifyEmail);
+router.get("/refresh-token", authController.refreshToken);
+router.post("/logout", authController.logout);
 router.post("/resend-verification", authController.resendVerification);
 
 export default router;
