@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { AuthService } from "../services/auth.service";
+import { setAuthCookies, setAccessTokenCookie, clearAuthCookies } from "../utils/cookieHelper.utils";
 
 const authService = new AuthService();
 
@@ -32,9 +33,7 @@ export class AuthController {
   async register(req: Request, res: Response) {
     try {
       const { email, password } = registerSchema.parse(req.body);
-
       const result = await authService.register(email, password);
-
       res.status(201).json(result);
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -43,7 +42,6 @@ export class AuthController {
           details: error.errors,
         });
       }
-
       res.status(400).json({
         error: error.message || "Registration failed",
       });
@@ -53,22 +51,10 @@ export class AuthController {
   async login(req: Request, res: Response) {
     try {
       const { email, password } = loginSchema.parse(req.body);
-
       const result = await authService.login(email, password);
-      // 🍪 Set access and refresh tokens in secure cookies
-      res.cookie("access_token", result.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 15 * 60 * 1000, // 15 mins
-      });
 
-      res.cookie("refresh_token", result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
+      // 🍪 Use cookie helper
+      setAuthCookies(res, result.accessToken, result.refreshToken);
 
       res.json({ user: result.user });
     } catch (error: any) {
@@ -78,7 +64,6 @@ export class AuthController {
           details: error.errors,
         });
       }
-
       res.status(401).json({
         error: error.message || "Login failed",
       });
@@ -90,12 +75,8 @@ export class AuthController {
       const refreshToken = req.cookies?.refresh_token;
       const newAccessToken = await authService.refreshAccessToken(refreshToken);
 
-      res.cookie("access_token", newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 15 * 60 * 1000,
-      });
+      // 🍪 Use helper to update access token only
+      setAccessTokenCookie(res, newAccessToken);
 
       res.json({ success: true });
     } catch (error: any) {
@@ -106,9 +87,7 @@ export class AuthController {
   async verifyEmail(req: Request, res: Response) {
     try {
       const { token } = verifyEmailSchema.parse(req.query);
-
       const result = await authService.verifyEmail(token);
-
       res.json(result);
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -117,7 +96,6 @@ export class AuthController {
           details: error.errors,
         });
       }
-
       res.status(400).json({
         error: error.message || "Email verification failed",
       });
@@ -127,9 +105,7 @@ export class AuthController {
   async resendVerification(req: Request, res: Response) {
     try {
       const { email } = resendVerificationSchema.parse(req.body);
-
       const result = await authService.resendVerification(email);
-
       res.json(result);
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -138,7 +114,6 @@ export class AuthController {
           details: error.errors,
         });
       }
-
       res.status(400).json({
         error: error.message || "Failed to resend verification",
       });
@@ -147,21 +122,10 @@ export class AuthController {
 
   async logout(req: Request, res: Response) {
     try {
-      // Call the logout service (useful if you extend it later)
       const result = authService.logout();
 
-      // Clear cookies
-      res.clearCookie("access_token", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      });
-
-      res.clearCookie("refresh_token", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      });
+      // 🍪 Clear cookies using helper
+      clearAuthCookies(res);
 
       res.json(result);
     } catch (error) {
