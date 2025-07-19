@@ -1,12 +1,13 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
 import { env } from "./config/env.js";
 import { generalLimiter } from "./middlewares/rateLimiter.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
-import formRoutes from "./routes/form.routes.js";
+import customerRoutes from "./routes/customer.routes.js";
 
 // Initialize Prisma
 export const prisma = new PrismaClient();
@@ -16,6 +17,7 @@ export const createApp = () => {
 
   // Security middleware
   app.use(helmet());
+  app.use(cookieParser()); // ✅ Required to access req.cookies
   app.use(
     cors({
       origin: env.CLIENT_URL,
@@ -42,7 +44,7 @@ export const createApp = () => {
 
   // API routes
   app.use("/api/auth", authRoutes);
-  app.use("/api/form", formRoutes);
+  app.use("/api/customer", customerRoutes);
 
   // 404 handler for API routes
   app.use("/api/*", (req, res) => {

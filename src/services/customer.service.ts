@@ -1,0 +1,135 @@
+import { PrismaClient } from "@prisma/client";
+import { encrypt, decrypt } from "../utils/crypto.util";
+
+const prisma = new PrismaClient();
+
+export interface CustomerDataInput {
+  customerId?: string;
+  name: string;
+  guardianName: string;
+  relation: string;
+  address: string;
+  aadharNumber: string;
+  mobileNumber: string;
+  filePath?: string; // e.g., Aadhaar image path
+}
+
+export class CustomerService {
+async submitCustomer(userId: string, data: CustomerDataInput) {
+  // ✅ Only encrypt sensitive fields, not enums
+  const encryptedData = {
+    name: encrypt(data.name),
+    guardianName: encrypt(data.guardianName),
+    address: encrypt(data.address),
+    aadharNumber: encrypt(data.aadharNumber),
+    mobileNumber: encrypt(data.mobileNumber),
+  };
+
+  // 🔒 If customerId is provided, attempt to update
+  if (data.customerId) {
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        id: data.customerId,
+        userId, // ✅ Ensure customer belongs to this user
+      },
+    });
+
+    if (existingCustomer) {
+      const updatedCustomer = await prisma.customer.update({
+        where: { id: existingCustomer.id },
+        data: {
+          ...encryptedData,
+          relation: data.relation as any,
+        },
+      });
+
+      return {
+        message: "Customer updated successfully",
+        customerId: updatedCustomer.id,
+      };
+    }
+
+    // ❗️If customerId is provided but not found, reject it
+    throw new Error("Customer not found or does not belong to the user.");
+  }
+
+  // ➕ Create new customer if no customerId is provided
+  const newCustomer = await prisma.customer.create({
+    data: {
+      userId,
+      ...encryptedData,
+      relation: data.relation as any,
+    },
+  });
+
+  return {
+    message: "Customer created successfully",
+    customerId: newCustomer.id,
+  };
+}
+
+
+
+  async getCustomers(
+    userId: string,
+    name?: string,
+    guardianName?: string,
+    address?: string,
+    page: number = 1,
+    limit: number = 10,
+    sortBy: "createdAt" | "updatedAt" = "createdAt",
+    sortOrder: "asc" | "desc" = "desc"
+  ) {
+    const customers = await prisma.customer.findMany({
+      where: { userId },
+      orderBy: { [sortBy]: sortOrder },
+    });
+
+    const decrypted = customers.map((c) => ({
+      id: c.id,
+      name: decrypt(c.name),
+      guardianName: decrypt(c.guardianName),
+      address: decrypt(c.address),
+      relation: c.relation,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
+    const filtered = decrypted.filter((c) => {
+      return (
+        (!name || c.name.toLowerCase().includes(name.toLowerCase())) &&
+        (!guardianName || c.guardianName.toLowerCase().includes(guardianName.toLowerCase())) &&
+        (!address || c.address.toLowerCase().includes(address.toLowerCase()))
+      );
+    });
+
+    const start = (page - 1) * limit;
+    const paginated = filtered.slice(start, start + limit);
+
+    return {
+      data: paginated,
+      page,
+      limit,
+      total: filtered.length,
+    };
+  }
+
+
+
+
+  async deleteCustomer(userId: string) {
+    const customer = await prisma.customer.findFirst({
+      where: { userId },
+    });
+
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+
+    await prisma.customer.delete({
+      where: { id: customer.id },
+    });
+
+    return { message: "Customer deleted successfully" };
+  }
+}
