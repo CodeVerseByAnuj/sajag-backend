@@ -8,8 +8,8 @@ import { generalLimiter } from "./middlewares/rateLimiter.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import customerRoutes from "./routes/customer.routes.js";
+import itemRoutes from "./routes/item.route.js";// Initialize Prisma
 
-// Initialize Prisma
 export const prisma = new PrismaClient();
 
 export const createApp = () => {
@@ -45,6 +45,7 @@ export const createApp = () => {
   // API routes
   app.use("/api/auth", authRoutes);
   app.use("/api/customer", customerRoutes);
+  app.use("/api/item", itemRoutes);
 
   // 404 handler for API routes
   app.use("/api/*", (req, res) => {
