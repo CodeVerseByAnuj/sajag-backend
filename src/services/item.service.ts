@@ -146,26 +146,23 @@ export class ItemService {
     };
   }
 
-  // async deleteItem(userId: string, customerId: string, itemId: string) {
-  //   // ✅ Ensure item belongs to customer's user
-  //   const item = await prisma.item.findFirst({
-  //     where: {
-  //       id: itemId,
-  //       customerId,
-  //       customer: {
-  //         userId,
-  //       },
-  //     },
-  //   });
+  async deleteItem(userId: string, itemId: string) {
+    const item = await prisma.item.findUnique({
+      where: { id: itemId },
+      include: {
+        order: {
+          include: {
+            customer: true,
+          },
+        },
+      },
+    });
 
-  //   if (!item) {
-  //     throw new Error("Item not found or unauthorized");
-  //   }
+    if (!item || item.order.customer.userId !== userId) {
+      throw new Error("Item not found or unauthorized");
+    }
 
-  //   await prisma.item.delete({
-  //     where: { id: itemId },
-  //   });
+    await prisma.item.delete({ where: { id: itemId } });
+  }
 
-  //   return { message: "Item deleted successfully" };
-  // }
 }

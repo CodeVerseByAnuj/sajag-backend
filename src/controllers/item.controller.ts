@@ -87,5 +87,30 @@ async getItems(req: AuthRequest, res: Response) {
   }
 }
 
+async deleteItem(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { itemId } = req.params;
+
+    if (!itemId) {
+      return res.status(400).json({ error: "Missing itemId in params" });
+    }
+
+    // Optional: check if item belongs to the user via customer.userId
+
+    await itemService.deleteItem(userId, itemId);
+
+    return res.status(200).json({ message: "Item deleted successfully" });
+  } catch (error: any) {
+    console.error("Delete item error:", error);
+    return res.status(500).json({ error: error.message || "Internal Server Error" });
+  }
+}
+
 
 }
