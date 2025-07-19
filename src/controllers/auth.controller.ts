@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { AuthService } from "../services/auth.service";
+import { sendSuccessResponse } from "../utils/sendSuccessResponse";
 import { setAuthCookies, setAccessTokenCookie, clearAuthCookies } from "../utils/cookieHelper.utils";
 
 const authService = new AuthService();
@@ -55,8 +56,7 @@ export class AuthController {
 
       // 🍪 Use cookie helper
       setAuthCookies(res, result.accessToken, result.refreshToken);
-
-      res.json({ user: result.user });
+      sendSuccessResponse(res,{ user: result.user } , "User logged in successfully.")
     } catch (error: any) {
       if (error.name === "ZodError") {
         return res.status(400).json({

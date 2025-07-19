@@ -12,7 +12,7 @@ const envSchema = z.object({
   EMAIL_USER: z.string(),
   EMAIL_PASS: z.string(),
   ENCRYPTION_KEY: z.string().length(32),
-  CLIENT_URL: z.string().default("http://localhost:8080"),
+  CLIENT_URL: z.string().default("http://localhost:3000"),
   PORT: z.string().transform(Number)
 });
 
