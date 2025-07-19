@@ -8,6 +8,6 @@ router.use(authenticateToken);
 
 router.post("/create-items", controller.createItem);
 router.get("/get-items", controller.getItems);
-router.delete("/delete-item", controller.deleteItem);
+router.delete("/delete-item/:itemId", controller.deleteItem);
 
 export default router;
