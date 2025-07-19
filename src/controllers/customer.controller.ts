@@ -71,7 +71,8 @@ export class CustomerController {
   async deleteCustomer(req: AuthRequest, res: Response) {
     try {
       const userId = req.user!.id;
-      const result = await customerService.deleteCustomer(userId);
+      const customerId = req.params.customerId;
+      const result = await customerService.deleteCustomer(userId, customerId);
       res.json(result);
     } catch (error: any) {
       res.status(400).json({

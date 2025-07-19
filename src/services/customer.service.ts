@@ -15,58 +15,58 @@ export interface CustomerDataInput {
 }
 
 export class CustomerService {
-async submitCustomer(userId: string, data: CustomerDataInput) {
-  // ✅ Only encrypt sensitive fields, not enums
-  const encryptedData = {
-    name: encrypt(data.name),
-    guardianName: encrypt(data.guardianName),
-    address: encrypt(data.address),
-    aadharNumber: encrypt(data.aadharNumber),
-    mobileNumber: encrypt(data.mobileNumber),
-  };
+  async submitCustomer(userId: string, data: CustomerDataInput) {
+    // ✅ Only encrypt sensitive fields, not enums
+    const encryptedData = {
+      name: encrypt(data.name),
+      guardianName: encrypt(data.guardianName),
+      address: encrypt(data.address),
+      aadharNumber: encrypt(data.aadharNumber),
+      mobileNumber: encrypt(data.mobileNumber),
+    };
 
-  // 🔒 If customerId is provided, attempt to update
-  if (data.customerId) {
-    const existingCustomer = await prisma.customer.findFirst({
-      where: {
-        id: data.customerId,
-        userId, // ✅ Ensure customer belongs to this user
-      },
-    });
-
-    if (existingCustomer) {
-      const updatedCustomer = await prisma.customer.update({
-        where: { id: existingCustomer.id },
-        data: {
-          ...encryptedData,
-          relation: data.relation as any,
+    // 🔒 If customerId is provided, attempt to update
+    if (data.customerId) {
+      const existingCustomer = await prisma.customer.findFirst({
+        where: {
+          id: data.customerId,
+          userId, // ✅ Ensure customer belongs to this user
         },
       });
 
-      return {
-        message: "Customer updated successfully",
-        customerId: updatedCustomer.id,
-      };
+      if (existingCustomer) {
+        const updatedCustomer = await prisma.customer.update({
+          where: { id: existingCustomer.id },
+          data: {
+            ...encryptedData,
+            relation: data.relation as any,
+          },
+        });
+
+        return {
+          message: "Customer updated successfully",
+          customerId: updatedCustomer.id,
+        };
+      }
+
+      // ❗️If customerId is provided but not found, reject it
+      throw new Error("Customer not found or does not belong to the user.");
     }
 
-    // ❗️If customerId is provided but not found, reject it
-    throw new Error("Customer not found or does not belong to the user.");
+    // ➕ Create new customer if no customerId is provided
+    const newCustomer = await prisma.customer.create({
+      data: {
+        userId,
+        ...encryptedData,
+        relation: data.relation as any,
+      },
+    });
+
+    return {
+      message: "Customer created successfully",
+      customerId: newCustomer.id,
+    };
   }
-
-  // ➕ Create new customer if no customerId is provided
-  const newCustomer = await prisma.customer.create({
-    data: {
-      userId,
-      ...encryptedData,
-      relation: data.relation as any,
-    },
-  });
-
-  return {
-    message: "Customer created successfully",
-    customerId: newCustomer.id,
-  };
-}
 
 
 
@@ -117,9 +117,9 @@ async submitCustomer(userId: string, data: CustomerDataInput) {
 
 
 
-  async deleteCustomer(userId: string) {
+  async deleteCustomer(userId: string, customerId: string) {
     const customer = await prisma.customer.findFirst({
-      where: { userId },
+      where: { id: customerId, userId },
     });
 
     if (!customer) {
@@ -127,7 +127,7 @@ async submitCustomer(userId: string, data: CustomerDataInput) {
     }
 
     await prisma.customer.delete({
-      where: { id: customer.id },
+      where: { id: customerId },
     });
 
     return { message: "Customer deleted successfully" };
