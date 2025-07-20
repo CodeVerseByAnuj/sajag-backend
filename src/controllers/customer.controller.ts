@@ -2,6 +2,7 @@ import { Response } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { CustomerService } from "../services/customer.service";
+import { sendSuccessResponse } from "../utils/sendSuccessResponse";
 
 const customerService = new CustomerService();
 
@@ -59,8 +60,7 @@ export class CustomerController {
       if (!result) {
         return res.json({ hasData: false, data: null });
       }
-
-      res.json(result);
+      sendSuccessResponse(res, result, 'Fetched customer data successfully');
     } catch (error: any) {
       res.status(500).json({
         error: error.message || "Failed to fetch customer data",
