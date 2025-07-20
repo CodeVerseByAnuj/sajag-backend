@@ -9,8 +9,8 @@ export interface CustomerDataInput {
   guardianName: string;
   relation: string;
   address: string;
-  aadharNumber: string;
-  mobileNumber: string;
+  aadharNumber?: string;
+  mobileNumber?: string;
   filePath?: string; // e.g., Aadhaar image path
 }
 
@@ -21,8 +21,8 @@ export class CustomerService {
       name: encrypt(data.name),
       guardianName: encrypt(data.guardianName),
       address: encrypt(data.address),
-      aadharNumber: encrypt(data.aadharNumber),
-      mobileNumber: encrypt(data.mobileNumber),
+      aadharNumber: encrypt(data.aadharNumber ?? ""),
+      mobileNumber: encrypt(data.mobileNumber ?? ""),
     };
 
     // 🔒 If customerId is provided, attempt to update
@@ -44,7 +44,6 @@ export class CustomerService {
         });
 
         return {
-          message: "Customer updated successfully",
           customerId: updatedCustomer.id,
         };
       }
@@ -107,7 +106,7 @@ export class CustomerService {
     const paginated = filtered.slice(start, start + limit);
 
     return {
-      data: paginated,
+      customers: paginated,
       page,
       limit,
       total: filtered.length,

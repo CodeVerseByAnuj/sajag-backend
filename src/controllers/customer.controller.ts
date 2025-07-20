@@ -12,8 +12,18 @@ const customerDataSchema = z.object({
   guardianName: z.string().min(1, "Guardian name is required"),
   relation: z.enum(["father", "mother", "wife", "husband", "son", "daughter", "other"]),
   address: z.string().min(1, "Address is required"),
-  aadharNumber: z.string().length(12, "Aadhar number must be 12 digits"),
-  mobileNumber: z.string().length(10, "Mobile number must be 10 digits"),
+  aadharNumber: z
+    .string()
+    .optional()
+    .refine(val => !val || /^\d{12}$/.test(val), {
+      message: "Aadhar number must be 12 digits",
+    }),
+  mobileNumber: z
+    .string()
+    .optional()
+    .refine(val => !val || /^[6-9]\d{9}$/.test(val), {
+      message: "Enter a valid 10-digit mobile number",
+    }),
 });
 
 export class CustomerController {
@@ -25,8 +35,7 @@ export class CustomerController {
       const result = await customerService.submitCustomer(userId, {
         ...customerData,
       });
-
-      res.json(result);
+      sendSuccessResponse(res, { customerId: result.customerId }, result.message)
     } catch (error: any) {
       if (error.name === "ZodError") {
         return res.status(400).json({
