@@ -77,6 +77,25 @@ export class CustomerController {
     }
   }
 
+  async getCustomerById(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const customerId = req.params.customerId;
+      const customer = await customerService.getCustomerById(customerId, userId);
+
+      if (!customer) {
+        return res.status(404).json({ success: false, error: 'Customer not found' });
+      }
+
+      sendSuccessResponse(res, customer, 'Customer fetched successfully');
+    } catch (error: any) {
+      console.error('Error fetching customer by ID:', error);
+      res.status(500).json({
+        error: error.message || 'Failed to fetch customer',
+      });
+    }
+  }
+
   async deleteCustomer(req: AuthRequest, res: Response) {
     try {
       const userId = req.user!.id;

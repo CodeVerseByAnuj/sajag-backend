@@ -113,8 +113,37 @@ export class CustomerService {
     };
   }
 
+ async getCustomerById(id: string, userId: string) {
+  if (!id) {
+    console.warn("Customer ID is missing");
+    return null;
+  }
 
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+  });
 
+  if (!customer) {
+    console.warn("Customer not found for ID:", id);
+    return null;
+  }
+
+  // ✅ Extra security: ensure customer belongs to logged-in user
+  if (customer.userId !== userId) {
+    console.warn("Customer does not belong to this user");
+    return null;
+  }
+
+  return {
+    id: customer.id,
+    name: decrypt(customer.name),
+    guardianName: decrypt(customer.guardianName),
+    address: decrypt(customer.address),
+    relation: customer.relation,
+    createdAt: customer.createdAt,
+    updatedAt: customer.updatedAt,
+  };
+}
 
   async deleteCustomer(userId: string, customerId: string) {
     const customer = await prisma.customer.findFirst({

@@ -13,6 +13,7 @@ router.use(requireEmailVerification);
 
 router.post("/create-customer",customerLimiter,customerController.submitCustomer);
 router.get("/", customerController.getCustomer);
+router.get("/:customerId", customerController.getCustomerById);
 router.delete("/delete-customer/:customerId", customerController.deleteCustomer);
 
 export default router;
