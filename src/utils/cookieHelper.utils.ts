@@ -15,7 +15,7 @@ export const setAuthCookies = (
 ) => {
   res.cookie("access_token", accessToken, {
     ...baseCookieOptions,
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 60 * 60 * 1000, // 1 hour
   });
 
   res.cookie("refresh_token", refreshToken, {
@@ -27,7 +27,7 @@ export const setAuthCookies = (
 export const setAccessTokenCookie = (res: Response, accessToken: string) => {
   res.cookie("access_token", accessToken, {
     ...baseCookieOptions,
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 60 * 60 * 1000, // 1 hour
   });
 };
 

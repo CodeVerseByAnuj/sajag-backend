@@ -139,6 +139,8 @@ export class CustomerService {
     name: decrypt(customer.name),
     guardianName: decrypt(customer.guardianName),
     address: decrypt(customer.address),
+    mobileNumber: decrypt(customer.mobileNumber),
+    aadharNumber: decrypt(customer.aadharNumber),
     relation: customer.relation,
     createdAt: customer.createdAt,
     updatedAt: customer.updatedAt,
