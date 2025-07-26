@@ -2,6 +2,7 @@ import { Response } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { ItemService } from "../services/item.service";
+import { sendSuccessResponse } from "../utils/sendSuccessResponse";
 
 const itemService = new ItemService();
 
@@ -30,8 +31,8 @@ export class ItemController {
     try {
       const userId = req.user!.id;
       const itemData = itemDataSchema.parse(req.body);
-    const item = await itemService.createOrUpdateItem(userId, { ...itemData });
-      res.json(item);
+      const item = await itemService.createOrUpdateItem(userId, { ...itemData });
+      sendSuccessResponse(res, { itemId: item }, "Item created successfully");
     } catch (error: any) {
       if (error.name === "ZodError") {
         return res.status(400).json({
@@ -46,71 +47,71 @@ export class ItemController {
     }
   }
 
-async getItems(req: AuthRequest, res: Response) {
-  try {
-    const userId = req.user?.id;
+  async getItems(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
 
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized: User ID not found" });
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized: User ID not found" });
+      }
+
+      const {
+        customerId,
+        name,
+        page = 1,
+        limit = 10,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+      } = req.query;
+
+      if (!customerId || typeof customerId !== "string") {
+        return res.status(400).json({ error: "Missing or invalid customerId" });
+      }
+
+      const pageNumber = parseInt(page as string, 10);
+      const limitNumber = parseInt(limit as string, 10);
+
+      const items = await itemService.getItems(
+        userId,
+        customerId,
+        typeof name === "string" ? name : undefined,
+        isNaN(pageNumber) ? 1 : pageNumber,
+        isNaN(limitNumber) ? 10 : limitNumber,
+        sortBy === "updatedAt" ? "updatedAt" : "createdAt",
+        sortOrder === "asc" ? "asc" : "desc"
+      );
+
+      return sendSuccessResponse(res, items, "Items fetched successfully");
+    } catch (error) {
+      console.error("Failed to fetch items:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
-
-    const {
-      customerId,
-      name,
-      page = 1,
-      limit = 10,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = req.query;
-
-    if (!customerId || typeof customerId !== "string") {
-      return res.status(400).json({ error: "Missing or invalid customerId" });
-    }
-
-    const pageNumber = parseInt(page as string, 10);
-    const limitNumber = parseInt(limit as string, 10);
-
-    const items = await itemService.getItems(
-      userId,
-      customerId,
-      typeof name === "string" ? name : undefined,
-      isNaN(pageNumber) ? 1 : pageNumber,
-      isNaN(limitNumber) ? 10 : limitNumber,
-      sortBy === "updatedAt" ? "updatedAt" : "createdAt",
-      sortOrder === "asc" ? "asc" : "desc"
-    );
-
-    return res.status(200).json(items);
-  } catch (error) {
-    console.error("Failed to fetch items:", error);
-    return res.status(500).json({ error: "Internal server error" });
   }
-}
 
-async deleteItem(req: AuthRequest, res: Response) {
-  try {
-    const userId = req.user?.id;
+  async deleteItem(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
 
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { itemId } = req.params;
+
+      if (!itemId) {
+        return res.status(400).json({ error: "Missing itemId in params" });
+      }
+
+      // Optional: check if item belongs to the user via customer.userId
+
+      await itemService.deleteItem(userId, itemId);
+
+      return res.status(200).json({ message: "Item deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete item error:", error);
+      return res.status(500).json({ error: error.message || "Internal Server Error" });
     }
-
-    const { itemId } = req.params;
-
-    if (!itemId) {
-      return res.status(400).json({ error: "Missing itemId in params" });
-    }
-
-    // Optional: check if item belongs to the user via customer.userId
-
-    await itemService.deleteItem(userId, itemId);
-
-    return res.status(200).json({ message: "Item deleted successfully" });
-  } catch (error: any) {
-    console.error("Delete item error:", error);
-    return res.status(500).json({ error: error.message || "Internal Server Error" });
   }
-}
 
 
 }
