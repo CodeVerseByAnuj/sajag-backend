@@ -18,6 +18,6 @@ export const authLimiter = rateLimit({
 // Form submission limiter
 export const customerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // limit each IP to 3 form submissions per hour
+  max: 200, // limit each IP to 200 form submissions per hour
   message: "Too many form submissions, please try again later.",
 });

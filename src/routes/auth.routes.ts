@@ -7,7 +7,7 @@ const router = Router();
 const authController = new AuthController();
 
 // Apply rate limiting to all auth routes
-router.use(authLimiter);
+// router.use(authLimiter);
 
 router.post("/register", authController.register);
 router.post("/login", authController.login);

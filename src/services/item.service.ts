@@ -146,6 +146,36 @@ export class ItemService {
     };
   }
 
+  async getItemById(userId: string, itemId: string) {
+    const item = await prisma.item.findUnique({
+      where: { id: itemId },
+      include: {
+        order: {
+          include: {
+            customer: true,
+          },
+        },
+      },
+    });
+
+    if (!item || item.order.customer.userId !== userId) {
+      throw new Error("Item not found or unauthorized");
+    }
+
+    return {
+      id: item.id,
+      name: decrypt(item.name),
+      category: item.category,
+      percentage: item.percentage,
+      amount: item.amount,
+      itemWeight: item.itemWeight,
+      imagePath: item.imagePath,
+      description: item.description,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+  }
+
   async deleteItem(userId: string, itemId: string) {
     const item = await prisma.item.findUnique({
       where: { id: itemId },

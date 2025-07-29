@@ -88,6 +88,33 @@ export class ItemController {
     }
   }
 
+  async getItemById(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { itemId } = req.params;
+
+      if (!itemId) {
+        return res.status(400).json({ error: "Missing itemId in params" });
+      }
+
+      const item = await itemService.getItemById(userId, itemId);
+
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      return sendSuccessResponse(res, item, "Item fetched successfully");
+    } catch (error: any) {
+      console.error("Get item error:", error);  
+      return res.status(500).json({ error: error.message || "Internal Server Error" });
+    }
+  }
+
   async deleteItem(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.id;

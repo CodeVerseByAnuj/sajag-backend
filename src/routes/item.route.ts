@@ -6,8 +6,9 @@ const router = Router();
 const controller = new ItemController();
 router.use(authenticateToken);
 
-router.post("/create-items", controller.createItem);
+router.post("/add-item", controller.createItem);
 router.get("/get-items", controller.getItems);
+router.get("/get-item/:itemId", controller.getItemById);
 router.delete("/delete-item/:itemId", controller.deleteItem);
 
 export default router;

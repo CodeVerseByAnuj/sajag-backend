@@ -26,7 +26,7 @@ export const createApp = () => {
   );
 
   // Rate limiting
-  app.use(generalLimiter);
+  // app.use(generalLimiter);
 
   // Body parsing
   app.use(express.json({ limit: "10mb" }));
