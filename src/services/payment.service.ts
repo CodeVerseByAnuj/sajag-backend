@@ -3,6 +3,22 @@ import { calculateInterest } from '../utils/interest.utils'
 
 const prisma = new PrismaClient();
 
+export function calculateStandaloneInterest(amount: number, fromDate: Date, toDate: Date, monthlyRate: number): number {
+  // Calculate interest based on monthly rate
+  // Monthly rate converted to daily rate for precise calculation
+  // P = Principal amount, R = Monthly interest rate, Days = Actual days between dates
+  const msInDay = 1000 * 60 * 60 * 24;
+  const diffInDays = Math.floor((toDate.getTime() - fromDate.getTime()) / msInDay);
+  
+  // Convert monthly rate to daily rate (assuming 30 days per month)
+  const dailyRate = monthlyRate / 30;
+  
+  // Interest = Principal × Daily Rate × Number of Days / 100
+  const interest = (amount * dailyRate * diffInDays) / 100;
+  
+  return Math.round(interest);
+}
+
 export async function applyPayment(itemId: string, amountPaid: number) {
   const item = await prisma.item.findUnique({ where: { id: itemId } })
   if (!item) throw new Error('Item not found')
