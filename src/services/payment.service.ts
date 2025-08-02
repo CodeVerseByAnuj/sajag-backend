@@ -25,23 +25,28 @@ export async function applyPayment(itemId: string, amountPaid: number) {
 
   const today = new Date()
   const fromDate = item.interestPaidTill || item.createdAt
-  const interest = calculateInterest(item, fromDate, today)
+  const totalInterest = calculateInterest(item, fromDate, today)
 
   let interestPaid = 0
   let principalPaid = 0
+  let remainingInterest = 0
 
-  if (amountPaid >= interest) {
-    interestPaid = interest
-    principalPaid = amountPaid - interest
+  if (amountPaid >= totalInterest) {
+    // Full interest payment + principal
+    interestPaid = totalInterest
+    principalPaid = amountPaid - totalInterest
+    remainingInterest = 0
   } else {
+    // Partial interest payment only
     interestPaid = amountPaid
     principalPaid = 0
+    remainingInterest = totalInterest - amountPaid
   }
 
   const updatedItem = await prisma.item.update({
     where: { id: itemId },
     data: {
-      interestPaidTill: amountPaid >= interest ? today : item.interestPaidTill,
+      interestPaidTill: amountPaid >= totalInterest ? today : item.interestPaidTill,
       totalPaid: { increment: amountPaid },
       remainingAmount: { decrement: principalPaid },
     }
@@ -61,11 +66,20 @@ export async function applyPayment(itemId: string, amountPaid: number) {
       itemId,
       fromDate,
       toDate: today,
-      interest,
+      interest: totalInterest,
     }
   })
 
-  return { updatedItem, interestPaid, principalPaid }
+  const nextInterestStartDate = amountPaid >= totalInterest ? today : null
+
+  return { 
+    interest: totalInterest,
+    interestPaid, 
+    principalPaid,
+    remainingAmount: updatedItem.remainingAmount,
+    remainingInterest,
+    nextInterestStartDate
+  }
 }
 
 // services/payment.service.ts
