@@ -1,0 +1,83 @@
+import { PrismaClient } from '@prisma/client'
+import { calculateInterest } from '../utils/interest.utils'
+
+const prisma = new PrismaClient();
+
+export async function applyPayment(itemId: string, amountPaid: number) {
+  const item = await prisma.item.findUnique({ where: { id: itemId } })
+  if (!item) throw new Error('Item not found')
+
+  const today = new Date()
+  const fromDate = item.interestPaidTill || item.createdAt
+  const interest = calculateInterest(item, fromDate, today)
+
+  let interestPaid = 0
+  let principalPaid = 0
+
+  if (amountPaid >= interest) {
+    interestPaid = interest
+    principalPaid = amountPaid - interest
+  } else {
+    interestPaid = amountPaid
+    principalPaid = 0
+  }
+
+  const updatedItem = await prisma.item.update({
+    where: { id: itemId },
+    data: {
+      interestPaidTill: amountPaid >= interest ? today : item.interestPaidTill,
+      totalPaid: { increment: amountPaid },
+      remainingAmount: { decrement: principalPaid },
+    }
+  })
+
+  await prisma.payment.create({
+    data: {
+      itemId,
+      amountPaid,
+      interestPaid,
+      principalPaid,
+    }
+  })
+
+  await prisma.interestHistory.create({
+    data: {
+      itemId,
+      fromDate,
+      toDate: today,
+      interest,
+    }
+  })
+
+  return { updatedItem, interestPaid, principalPaid }
+}
+
+// services/payment.service.ts
+export  async function getPaymentHistory(itemId: string) {
+    // 1. Get payment list
+    const payments = await prisma.payment.findMany({
+      where: { itemId },
+      orderBy: { paidAt: "asc" },
+    });
+
+    // 2. Get aggregated totals
+    const totals = await prisma.payment.aggregate({
+      where: { itemId },
+      _sum: {
+        amountPaid: true,
+        interestPaid: true,
+        principalPaid: true,
+      },
+    });
+
+    return {
+      itemId,
+      totals: {
+        totalAmountPaid: totals._sum.amountPaid || 0,
+        totalInterestPaid: totals._sum.interestPaid || 0,
+        totalPrincipalPaid: totals._sum.principalPaid || 0,
+      },
+      history: payments,
+    };
+  }
+

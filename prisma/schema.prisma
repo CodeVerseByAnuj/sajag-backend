@@ -52,23 +52,33 @@ model Order {
 }
 
 model Item {
-  id          String   @id @default(cuid())
-  customerId  String
-  name        String
-  category    Category
-  percentage  Float
-  amount      Float
-  itemWeight  String
-  imagePath   String?
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orderId     String // 👈 REQUIRED FIELD
-  customer    Customer @relation("CustomerToItems", fields: [customerId], references: [id], onDelete: Cascade)
-  order       Order    @relation(fields: [orderId], references: [id])
+  id            String   @id @default(cuid())
+  customerId    String
+  name          String
+  category      Category
+  percentage    Float     // monthly interest rate (e.g. 2%)
+  amount        Float     // original pledged amount
+  itemWeight    String
+  imagePath     String?
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orderId       String
+
+  customer      Customer  @relation("CustomerToItems", fields: [customerId], references: [id], onDelete: Cascade)
+  order         Order     @relation(fields: [orderId], references: [id])
+
+  // 🔽 Add these fields:
+  interestPaidTill DateTime? // last date till which interest was paid
+  totalPaid        Float     @default(0) // total amount paid
+  remainingAmount  Float      @default(0) // principal remaining
+
+  payments         Payment[]
+  interestHistory  InterestHistory[]
 
   @@map("items")
 }
+
 
 enum Relation {
   father
@@ -83,4 +93,30 @@ enum Relation {
 enum Category {
   gold
   silver
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  itemId        String
+  amountPaid    Float
+  interestPaid  Float
+  principalPaid Float
+  paidAt        DateTime @default(now())
+
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model InterestHistory {
+  id         String   @id @default(cuid())
+  itemId     String
+  fromDate   DateTime
+  toDate     DateTime
+  interest   Float
+  createdAt  DateTime @default(now())
+
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("interest_history")
 }

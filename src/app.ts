@@ -9,6 +9,8 @@ import { errorHandler } from "./middlewares/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import customerRoutes from "./routes/customer.routes.js";
 import itemRoutes from "./routes/item.route.js";// Initialize Prisma
+import paymentRoutes from "./routes/payment.router.js";
+
 
 export const prisma = new PrismaClient();
 
@@ -46,6 +48,7 @@ export const createApp = () => {
   app.use("/api/auth", authRoutes);
   app.use("/api/customer", customerRoutes);
   app.use("/api/item", itemRoutes);
+  app.use("/api/payment", paymentRoutes);
 
   // 404 handler for API routes
   app.use("/api/*", (req, res) => {
