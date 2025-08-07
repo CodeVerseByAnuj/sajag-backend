@@ -19,95 +19,199 @@ export function calculateStandaloneInterest(amount: number, fromDate: Date, toDa
   return Math.round(interest);
 }
 
-export async function applyPayment(itemId: string, amountPaid: number) {
+export async function applyPayment(itemId: string, interestAmount: number, principalAmount: number, paymentDate: Date) {
   const item = await prisma.item.findUnique({ where: { id: itemId } })
   if (!item) throw new Error('Item not found')
 
-  const today = new Date()
-  const fromDate = item.interestPaidTill || item.createdAt
-  const totalInterest = calculateInterest(item, fromDate, today)
-
-  let interestPaid = 0
-  let principalPaid = 0
-  let remainingInterest = 0
-
-  if (amountPaid >= totalInterest) {
-    // Full interest payment + principal
-    interestPaid = totalInterest
-    principalPaid = amountPaid - totalInterest
-    remainingInterest = 0
-  } else {
-    // Partial interest payment only
-    interestPaid = amountPaid
-    principalPaid = 0
-    remainingInterest = totalInterest - amountPaid
-  }
+  // Calculate total amount paid
+  const totalAmountPaid = interestAmount + principalAmount;
+  
+  // Get the date from which interest should be calculated next
+  const fromDate = item.interestPaidTill || item.createdAt;
 
   const updatedItem = await prisma.item.update({
     where: { id: itemId },
     data: {
-      interestPaidTill: amountPaid >= totalInterest ? today : item.interestPaidTill,
-      totalPaid: { increment: amountPaid },
-      remainingAmount: { decrement: principalPaid },
+      interestPaidTill: paymentDate,
+      totalPaid: { increment: principalAmount + interestAmount },
+      remainingAmount: { increment: item.amount - principalAmount },
     }
   })
 
-  await prisma.payment.create({
+  // Create payment record with proper interest date tracking
+  const paymentRecord = await prisma.payment.create({
     data: {
       itemId,
-      amountPaid,
-      interestPaid,
-      principalPaid,
+      amountPaid: principalAmount,
+      interestPaid: interestAmount,
+      principalPaid: principalAmount,
+      paidAt: paymentDate, // Store the exact payment date
     }
   })
 
-  await prisma.interestHistory.create({
-    data: {
-      itemId,
-      fromDate,
-      toDate: today,
-      interest: totalInterest,
-    }
-  })
+  // Create interest history record for this period
+  // await prisma.interestHistory.create({
+  //   data: {
+  //     itemId,
+  //     fromDate,
+  //     toDate: paymentDate,
+  //     interest: interestAmount,
+  //   }
+  // })
 
-  const nextInterestStartDate = amountPaid >= totalInterest ? today : null
+  // Calculate remaining interest (if any partial interest payment)
+  const currentInterest = calculateInterest(item, fromDate, paymentDate);
+  const remainingInterest = Math.max(0, currentInterest - interestAmount);
+  
+  // Next interest calculation should start from payment date if interest is fully paid
+  const nextInterestStartDate = remainingInterest === 0 ? paymentDate : fromDate;
 
   return { 
-    interest: totalInterest,
-    interestPaid, 
-    principalPaid,
+    paymentId: paymentRecord.id,
+    paymentDate: paymentDate,
+    interest: currentInterest,
+    interestPaid: interestAmount, 
+    principalPaid: principalAmount,
+    interestPaidTillDate: paymentDate,
     remainingAmount: updatedItem.remainingAmount,
     remainingInterest,
-    nextInterestStartDate
+    nextInterestStartDate,
+    paymentDetails: {
+      amountPaid: totalAmountPaid,
+      interestAmount: interestAmount,
+      principalAmount: principalAmount,
+      interestDate: paymentDate
+    }
   }
 }
 
+// Get current interest status for an item
+export async function getCurrentInterestStatus(itemId: string) {
+  const item = await prisma.item.findUnique({ 
+    where: { id: itemId },
+    include: {
+      payments: {
+        orderBy: { paidAt: 'desc' },
+        take: 1, // Get the latest payment
+      }
+    }
+  });
+
+  if (!item) throw new Error('Item not found');
+
+  const today = new Date();
+  const fromDate = item.interestPaidTill || item.createdAt;
+  const currentInterest = calculateInterest(item, fromDate, today);
+
+  // Calculate days since last interest payment
+  const msInDay = 1000 * 60 * 60 * 24;
+  const daysSinceLastPayment = Math.floor((today.getTime() - fromDate.getTime()) / msInDay);
+
+  return {
+    itemId,
+    currentStatus: {
+      originalAmount: item.amount,
+      remainingPrincipal: item.remainingAmount,
+      totalPaid: item.totalPaid,
+      monthlyInterestRate: item.percentage,
+      interestPaidTill: item.interestPaidTill,
+      daysSinceLastInterestPayment: daysSinceLastPayment,
+    },
+    currentInterest: {
+      amount: currentInterest,
+      fromDate,
+      toDate: today,
+      daysCalculated: daysSinceLastPayment,
+    },
+    lastPayment: item.payments[0] ? {
+      paymentId: item.payments[0].id,
+      paymentDate: item.payments[0].paidAt,
+      amountPaid: item.payments[0].amountPaid,
+      interestAmount: item.payments[0].interestPaid,
+      principalAmount: item.payments[0].principalPaid,
+    } : null,
+  };
+}
+
 // services/payment.service.ts
-export  async function getPaymentHistory(itemId: string) {
-    // 1. Get payment list
-    const payments = await prisma.payment.findMany({
-      where: { itemId },
-      orderBy: { paidAt: "asc" },
-    });
+export async function getPaymentHistory(itemId: string) {
+  // 1. Get payment list with detailed information
+  const payments = await prisma.payment.findMany({
+    where: { itemId },
+    orderBy: { paidAt: "asc" },
+    select: {
+      id: true,
+      amountPaid: true,
+      interestPaid: true,
+      principalPaid: true,
+      paidAt: true, // Payment date
+    }
+  });
 
-    // 2. Get aggregated totals
-    const totals = await prisma.payment.aggregate({
-      where: { itemId },
-      _sum: {
-        amountPaid: true,
-        interestPaid: true,
-        principalPaid: true,
-      },
-    });
+  // 2. Get interest history for this item
+  // const interestHistory = await prisma.interestHistory.findMany({
+  //   where: { itemId },
+  //   orderBy: { fromDate: "asc" },
+  //   select: {
+  //     id: true,
+  //     fromDate: true,
+  //     toDate: true,
+  //     interest: true,
+  //     createdAt: true,
+  //   }
+  // });
 
-    return {
-      itemId,
-      totals: {
-        totalAmountPaid: totals._sum.amountPaid || 0,
-        totalInterestPaid: totals._sum.interestPaid || 0,
-        totalPrincipalPaid: totals._sum.principalPaid || 0,
-      },
-      history: payments,
-    };
-  }
+  // 3. Get current item status
+  const item = await prisma.item.findUnique({
+    where: { id: itemId },
+    select: {
+      interestPaidTill: true,
+      totalPaid: true,
+      remainingAmount: true,
+      amount: true,
+      percentage: true,
+    }
+  });
+
+  // 4. Get aggregated totals
+  const totals = await prisma.payment.aggregate({
+    where: { itemId },
+    _sum: {
+      amountPaid: true,
+      interestPaid: true,
+      principalPaid: true,
+    },
+  });
+
+  return {
+    itemId,
+    currentStatus: {
+      originalAmount: item?.amount || 0,
+      remainingAmount: item?.remainingAmount || 0,
+      totalPaid: item?.totalPaid || 0,
+      interestPaidTill: item?.interestPaidTill,
+      monthlyInterestRate: item?.percentage || 0,
+    },
+    totals: {
+      totalAmountPaid: totals._sum.amountPaid || 0,
+      totalInterestPaid: totals._sum.interestPaid || 0,
+      totalPrincipalPaid: totals._sum.principalPaid || 0,
+    },
+    paymentHistory: payments.map(payment => ({
+      paymentId: payment.id,
+      paymentDate: payment.paidAt,
+      amountPaid: payment.amountPaid,
+      interestAmount: payment.interestPaid,
+      principalAmount: payment.principalPaid,
+      interestDate: payment.paidAt, // Date when interest was paid
+    })),
+    // interestHistory: interestHistory.map(history => ({
+    //   id: history.id,
+    //   fromDate: history.fromDate,
+    //   toDate: history.toDate,
+    //   interestAmount: history.interest,
+    //   calculatedOn: history.createdAt,
+    // })),
+  };
+}
 

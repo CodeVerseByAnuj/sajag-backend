@@ -14,5 +14,6 @@ router.post('/calculate-interest', controller.calculateInterest);
 router.use(authenticateToken);
 router.post('/payment', controller.makePayment);
 router.get('/payment/:itemId', controller.getPaymentHistory);
+router.get('/interest-status/:itemId', controller.getCurrentInterestStatus);
 
 export default router;

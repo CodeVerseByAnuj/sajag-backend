@@ -8,16 +8,18 @@ datasource db {
 }
 
 model User {
-  id               String     @id @default(cuid())
-  email            String     @unique
+  id               String            @id @default(cuid())
+  email            String            @unique
   password         String
-  isEmailVerified  Boolean    @default(false)
+  isEmailVerified  Boolean           @default(false)
   emailVerifyToken String?
-  loginAttempts    Int        @default(0)
+  loginAttempts    Int               @default(0)
   lockUntil        DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  customers        Customer[] // ✅ Relation to customers
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  customers        Customer[]
+  interest_history InterestHistory[]
+  payment_history  payment_history[]
 
   @@map("users")
 }
@@ -34,8 +36,8 @@ model Customer {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders       Order[] // ✅ Order relation
-  items        Item[]   @relation("CustomerToItems") // ✅ Direct item relation
+  items        Item[]   @relation("CustomerToItems")
+  orders       Order[]
 
   @@map("customers")
 }
@@ -45,40 +47,71 @@ model Order {
   customerId String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   Item       Item[]
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@map("orders")
 }
 
 model Item {
-  id            String   @id @default(cuid())
-  customerId    String
-  name          String
-  category      Category
-  percentage    Float     // monthly interest rate (e.g. 2%)
-  amount        Float     // original pledged amount
-  itemWeight    String
-  imagePath     String?
-  description   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  orderId       String
-
-  customer      Customer  @relation("CustomerToItems", fields: [customerId], references: [id], onDelete: Cascade)
-  order         Order     @relation(fields: [orderId], references: [id])
-
-  // 🔽 Add these fields:
-  interestPaidTill DateTime? // last date till which interest was paid
-  totalPaid        Float     @default(0) // total amount paid
-  remainingAmount  Float      @default(0) // principal remaining
-
-  payments         Payment[]
+  id               String            @id @default(cuid())
+  name             String
+  category         Category
+  percentage       Float
+  amount           Float
+  itemWeight       String
+  imagePath        String?
+  description      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  customerId       String
+  orderId          String
+  interestPaidTill DateTime?
+  remainingAmount  Float             @default(0)
+  totalPaid        Float             @default(0)
   interestHistory  InterestHistory[]
+  customer         Customer          @relation("CustomerToItems", fields: [customerId], references: [id], onDelete: Cascade)
+  order            Order             @relation(fields: [orderId], references: [id])
+  payment_history  payment_history[]
+  payments         Payment[]
 
   @@map("items")
 }
 
+model Payment {
+  id            String   @id @default(cuid())
+  itemId        String
+  amountPaid    Float
+  interestPaid  Float
+  principalPaid Float
+  paidAt        DateTime @default(now())
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model InterestHistory {
+  id             String   @id @default(cuid())
+  itemId         String
+  interestAmount Float
+  interestDate   DateTime
+  paidAt         DateTime @default(now())
+  userId         String
+  item           Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  users          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("interest_history")
+}
+
+model payment_history {
+  id         String   @id
+  itemId     String
+  userId     String
+  amountPaid Float
+  paidAt     DateTime @default(now())
+  items      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  users      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
 enum Relation {
   father
@@ -93,30 +126,4 @@ enum Relation {
 enum Category {
   gold
   silver
-}
-
-model Payment {
-  id            String   @id @default(cuid())
-  itemId        String
-  amountPaid    Float
-  interestPaid  Float
-  principalPaid Float
-  paidAt        DateTime @default(now())
-
-  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-
-  @@map("payments")
-}
-
-model InterestHistory {
-  id         String   @id @default(cuid())
-  itemId     String
-  fromDate   DateTime
-  toDate     DateTime
-  interest   Float
-  createdAt  DateTime @default(now())
-
-  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-
-  @@map("interest_history")
 }

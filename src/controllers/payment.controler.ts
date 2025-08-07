@@ -1,12 +1,16 @@
 import { Response } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../middlewares/auth.middleware";
-import { applyPayment, getPaymentHistory, calculateStandaloneInterest } from "../services/payment.service";
+import { applyPayment, getPaymentHistory, calculateStandaloneInterest, getCurrentInterestStatus } from "../services/payment.service";
 import { sendSuccessResponse } from "../utils/sendSuccessResponse";
 
 const paymentSchema = z.object({
   itemId: z.string().min(1, "Item ID is required"),
-  amountPaid: z.number().positive("Amount paid must be greater than zero"),
+  interestAmount: z.number().min(0, "Interest amount must be non-negative"),
+  principalAmount: z.number().min(0, "Principal amount must be non-negative"),
+  paymentDate: z.string().min(1, "Payment date is required").refine((date) => !isNaN(Date.parse(date)), {
+    message: "Payment date must be a valid date"
+  }),
 });
 
 const calculateInterestSchema = z.object({
@@ -84,11 +88,37 @@ export class PaymentController {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { itemId, amountPaid } = paymentSchema.parse(req.body);
+      const { itemId, interestAmount, principalAmount, paymentDate } = paymentSchema.parse(req.body);
+      
+      // Convert string date to Date object
+      const parsedPaymentDate = new Date(paymentDate);
+      
+      // Calculate total amount paid
+      const totalAmountPaid = interestAmount + principalAmount;
 
-      const result = await applyPayment(itemId, amountPaid);
+      const result = await applyPayment(itemId, interestAmount, principalAmount, parsedPaymentDate);
 
-      return sendSuccessResponse(res, result, "Payment applied successfully");
+      // Enhanced response with detailed payment and interest information
+      const responseData = {
+        paymentId: result.paymentId,
+        paymentDate: result.paymentDate,
+        paymentAmount: totalAmountPaid,
+        interestAmount: result.interestPaid,
+        principalAmount: result.principalPaid,
+        interestDate: result.paymentDate, // Date when interest was calculated and paid
+        interestPaidTillDate: result.interestPaidTillDate,
+        remainingAmount: result.remainingAmount,
+        remainingInterest: result.remainingInterest,
+        nextInterestStartDate: result.nextInterestStartDate,
+        summary: {
+          totalInterestCalculated: result.interest,
+          amountPaid: totalAmountPaid,
+          interestPortion: result.interestPaid,
+          principalPortion: result.principalPaid,
+        }
+      };
+
+      return sendSuccessResponse(res, responseData, "Payment applied successfully");
     } catch (error: any) {
       if (error.name === "ZodError") {
         return res.status(400).json({
@@ -110,13 +140,73 @@ export class PaymentController {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // Fetch payment history logic here
-      const paymentHistory = await getPaymentHistory(req.params.itemId);
-      // This is a placeholder, implement actual logic to fetch payment history
+      const itemId = req.params.itemId;
+      if (!itemId) {
+        return res.status(400).json({ error: "Item ID is required" });
+      }
 
-      return sendSuccessResponse(res, paymentHistory, "Payment history fetched successfully");
+      // Fetch comprehensive payment and interest history
+      const paymentHistory = await getPaymentHistory(itemId);
+
+      // Structure the response to match makePayment response format
+      const responseData = {
+        itemId: paymentHistory.itemId,
+        currentStatus: {
+          originalAmount: paymentHistory.currentStatus.originalAmount,
+          remainingAmount: paymentHistory.currentStatus.remainingAmount,
+          totalPaid: paymentHistory.currentStatus.totalPaid,
+          interestPaidTill: paymentHistory.currentStatus.interestPaidTill,
+          monthlyInterestRate: paymentHistory.currentStatus.monthlyInterestRate,
+        },
+        summary: {
+          totalAmountPaid: paymentHistory.totals.totalAmountPaid,
+          totalInterestPaid: paymentHistory.totals.totalInterestPaid,
+          totalPrincipalPaid: paymentHistory.totals.totalPrincipalPaid,
+        },
+        payments: paymentHistory.paymentHistory.map(payment => {
+          const totalAmountPaid = payment.interestAmount + payment.principalAmount;
+          return {
+            paymentId: payment.paymentId,
+            paymentDate: payment.paymentDate,
+            paymentAmount: totalAmountPaid,
+            interestAmount: payment.interestAmount,
+            principalAmount: payment.principalAmount,
+            interestDate: payment.paymentDate,
+            summary: {
+              amountPaid: totalAmountPaid,
+              interestPortion: payment.interestAmount,
+              principalPortion: payment.principalAmount,
+            }
+          };
+        }),
+      };
+
+      return sendSuccessResponse(res, responseData, "Payment history fetched successfully");
     } catch (error: any) {
       console.error("Error fetching payment history:", error);
+      return res.status(500).json({
+        error: error.message || "Internal server error",
+      });
+    }
+  }
+
+  async getCurrentInterestStatus(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const itemId = req.params.itemId;
+      if (!itemId) {
+        return res.status(400).json({ error: "Item ID is required" });
+      }
+
+      const interestStatus = await getCurrentInterestStatus(itemId);
+
+      return sendSuccessResponse(res, interestStatus, "Current interest status fetched successfully");
+    } catch (error: any) {
+      console.error("Error fetching current interest status:", error);
       return res.status(500).json({
         error: error.message || "Internal server error",
       });
