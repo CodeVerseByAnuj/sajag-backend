@@ -48,17 +48,7 @@ export async function applyPayment(itemId: string, interestAmount: number, princ
       paidAt: paymentDate, // Store the exact payment date
     }
   })
-
-  // Create interest history record for this period
-  // await prisma.interestHistory.create({
-  //   data: {
-  //     itemId,
-  //     fromDate,
-  //     toDate: paymentDate,
-  //     interest: interestAmount,
-  //   }
-  // })
-
+  
   // Calculate remaining interest (if any partial interest payment)
   const currentInterest = calculateInterest(item, fromDate, paymentDate);
   const remainingInterest = Math.max(0, currentInterest - interestAmount);
