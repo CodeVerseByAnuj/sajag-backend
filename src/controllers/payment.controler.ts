@@ -99,26 +99,26 @@ export class PaymentController {
       const result = await applyPayment(itemId, interestAmount, principalAmount, parsedPaymentDate);
 
       // Enhanced response with detailed payment and interest information
-      const responseData = {
-        paymentId: result.paymentId,
-        paymentDate: result.paymentDate,
-        paymentAmount: totalAmountPaid,
-        interestAmount: result.interestPaid,
-        principalAmount: result.principalPaid,
-        interestDate: result.paymentDate, // Date when interest was calculated and paid
-        interestPaidTillDate: result.interestPaidTillDate,
-        remainingAmount: result.remainingAmount,
-        remainingInterest: result.remainingInterest,
-        nextInterestStartDate: result.nextInterestStartDate,
-        summary: {
-          totalInterestCalculated: result.interest,
-          amountPaid: totalAmountPaid,
-          interestPortion: result.interestPaid,
-          principalPortion: result.principalPaid,
-        }
-      };
+      // const responseData = {
+      //   paymentId: result.paymentId,
+      //   paymentDate: result.paymentDate,
+      //   paymentAmount: totalAmountPaid,
+      //   interestAmount: result.interestPaid,
+      //   principalAmount: result.principalPaid,
+      //   interestDate: result.paymentDate, // Date when interest was calculated and paid
+      //   interestPaidTillDate: result.interestPaidTillDate,
+      //   remainingAmount: result.remainingAmount,
+      //   remainingInterest: result.remainingInterest,
+      //   nextInterestStartDate: result.nextInterestStartDate,
+      //   summary: {
+      //     totalInterestCalculated: result.interest,
+      //     amountPaid: totalAmountPaid,
+      //     interestPortion: result.interestPaid,
+      //     principalPortion: result.principalPaid,
+      //   }
+      // };
 
-      return sendSuccessResponse(res, responseData, "Payment applied successfully");
+      return sendSuccessResponse(res, result, "Payment applied successfully");
     } catch (error: any) {
       if (error.name === "ZodError") {
         return res.status(400).json({
@@ -147,6 +147,16 @@ export class PaymentController {
 
       // Fetch comprehensive payment and interest history
       const paymentHistory = await getPaymentHistory(itemId);
+      console.log(paymentHistory, 'paymentHistory')
+
+      type PaymentHistoryItem = {
+        paymentId: string;
+        paymentDate: Date;   // 👈 paymentDate instead of paidAt
+        amountPaid: number;
+        interestAmount: number;
+        principalAmount: number;
+        interestDate: Date;
+      };
 
       // Structure the response to match makePayment response format
       const responseData = {
@@ -163,7 +173,7 @@ export class PaymentController {
           totalInterestPaid: paymentHistory.totals.totalInterestPaid,
           totalPrincipalPaid: paymentHistory.totals.totalPrincipalPaid,
         },
-        payments: paymentHistory.paymentHistory.map(payment => {
+        payments: paymentHistory.paymentHistory.map((payment: PaymentHistoryItem) => {
           const totalAmountPaid = payment.interestAmount + payment.principalAmount;
           return {
             paymentId: payment.paymentId,
@@ -172,11 +182,11 @@ export class PaymentController {
             interestAmount: payment.interestAmount,
             principalAmount: payment.principalAmount,
             interestDate: payment.paymentDate,
-            summary: {
-              amountPaid: totalAmountPaid,
-              interestPortion: payment.interestAmount,
-              principalPortion: payment.principalAmount,
-            }
+            // summary: {
+            //   amountPaid: totalAmountPaid,
+            //   interestPortion: payment.interestAmount,
+            //   principalPortion: payment.principalAmount,
+            // }
           };
         }),
       };

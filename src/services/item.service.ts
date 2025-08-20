@@ -49,6 +49,8 @@ export class ItemService {
       category: data.category,
       percentage: data.percentage,
       amount: data.amount,
+      remainingAmount:data.amount,
+      interestPaidTill: new Date(),
       imagePath: data.imagePath,
       description: data.description,
       customerId: data.customerId,

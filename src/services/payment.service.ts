@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { calculateInterest } from '../utils/interest.utils'
+import { object } from 'zod';
 
 const prisma = new PrismaClient();
 
@@ -9,75 +10,72 @@ export function calculateStandaloneInterest(amount: number, fromDate: Date, toDa
   // P = Principal amount, R = Monthly interest rate, Days = Actual days between dates
   const msInDay = 1000 * 60 * 60 * 24;
   const diffInDays = Math.floor((toDate.getTime() - fromDate.getTime()) / msInDay);
-  
+
   // Convert monthly rate to daily rate (assuming 30 days per month)
   const dailyRate = monthlyRate / 30;
-  
+
   // Interest = Principal × Daily Rate × Number of Days / 100
   const interest = (amount * dailyRate * diffInDays) / 100;
-  
+
   return Math.round(interest);
 }
+export async function applyPayment(
+  itemId: string,
+  interestAmount: number,
+  principalAmount: number,
+  paymentDate: Date
+) {
+  const item = await prisma.item.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error("Item not found");
+  console.log(item, 'Item Details');
+  const originalAmount = item.remainingAmount;
+  if (originalAmount <= 0) {
+    throw new Error("remainingAmount must be greater than zero");
+  }
+  console.log(originalAmount, 'Original Amount')
+  const remainingAmount = originalAmount - principalAmount;
+  console.log(remainingAmount, 'Remaining Amount')
 
-export async function applyPayment(itemId: string, interestAmount: number, principalAmount: number, paymentDate: Date) {
-  const item = await prisma.item.findUnique({ where: { id: itemId } })
-  if (!item) throw new Error('Item not found')
-
-  // Calculate total amount paid
+  // Total paid
   const totalAmountPaid = interestAmount + principalAmount;
-  
-  // Get the date from which interest should be calculated next
-  const fromDate = item.interestPaidTill || item.createdAt;
+  if (totalAmountPaid <= 0) {
+    throw new Error("Total amount paid must be greater than zero");
+  }
 
+  // Update item (sirf principal reduce hoga)
   const updatedItem = await prisma.item.update({
     where: { id: itemId },
     data: {
       interestPaidTill: paymentDate,
-      totalPaid: { increment: principalAmount + interestAmount },
-      remainingAmount: { increment: item.amount - principalAmount },
-    }
-  })
+      totalPaid: { increment: totalAmountPaid },
+      remainingAmount: remainingAmount,
+    },
+  });
 
   // Create payment record with proper interest date tracking
   const paymentRecord = await prisma.payment.create({
     data: {
       itemId,
-      amountPaid: principalAmount,
+      amountPaid: totalAmountPaid,
       interestPaid: interestAmount,
       principalPaid: principalAmount,
       paidAt: paymentDate, // Store the exact payment date
     }
   })
-  
-  // Calculate remaining interest (if any partial interest payment)
-  const currentInterest = calculateInterest(item, fromDate, paymentDate);
-  const remainingInterest = Math.max(0, currentInterest - interestAmount);
-  
-  // Next interest calculation should start from payment date if interest is fully paid
-  const nextInterestStartDate = remainingInterest === 0 ? paymentDate : fromDate;
 
-  return { 
-    paymentId: paymentRecord.id,
-    paymentDate: paymentDate,
-    interest: currentInterest,
-    interestPaid: interestAmount, 
+  return {
+    paymentDate,
+    totalPaid: totalAmountPaid,
+    interestPaid: interestAmount,
     principalPaid: principalAmount,
-    interestPaidTillDate: paymentDate,
-    remainingAmount: updatedItem.remainingAmount,
-    remainingInterest,
-    nextInterestStartDate,
-    paymentDetails: {
-      amountPaid: totalAmountPaid,
-      interestAmount: interestAmount,
-      principalAmount: principalAmount,
-      interestDate: paymentDate
-    }
-  }
+    remainingAmount: remainingAmount,
+  };
 }
+
 
 // Get current interest status for an item
 export async function getCurrentInterestStatus(itemId: string) {
-  const item = await prisma.item.findUnique({ 
+  const item = await prisma.item.findUnique({
     where: { id: itemId },
     include: {
       payments: {
@@ -137,6 +135,8 @@ export async function getPaymentHistory(itemId: string) {
       paidAt: true, // Payment date
     }
   });
+
+  console.log("Payment history for item:", payments);
 
   // 2. Get interest history for this item
   // const interestHistory = await prisma.interestHistory.findMany({

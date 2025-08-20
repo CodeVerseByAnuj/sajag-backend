@@ -11,7 +11,7 @@ const customerController = new CustomerController();
 router.use(authenticateToken);
 router.use(requireEmailVerification);
 
-router.post("/create-customer",customerLimiter,customerController.submitCustomer);
+router.post("/create-customer",customerController.submitCustomer);
 router.get("/", customerController.getCustomer);
 router.get("/:customerId", customerController.getCustomerById);
 router.delete("/delete-customer/:customerId", customerController.deleteCustomer);
