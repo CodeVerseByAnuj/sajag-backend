@@ -13,21 +13,27 @@ export const setAuthCookies = (
   accessToken: string,
   refreshToken: string
 ) => {
+  const accessMaxAge = 60 * 60 * 1000; // 1 hour
+  const refreshMaxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+  console.log("Setting access_token cookie with maxAge:", accessMaxAge);
+  console.log("Setting refresh_token cookie with maxAge:", refreshMaxAge);
   res.cookie("access_token", accessToken, {
     ...baseCookieOptions,
-    maxAge: 60 * 60 * 1000, // 1 hour
+    maxAge: accessMaxAge,
   });
 
   res.cookie("refresh_token", refreshToken, {
     ...baseCookieOptions,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: refreshMaxAge,
   });
 };
 
 export const setAccessTokenCookie = (res: Response, accessToken: string) => {
+  const accessMaxAge = 60 * 60 * 1000; // 1 hour
+  console.log("Setting access_token cookie with maxAge:", accessMaxAge);
   res.cookie("access_token", accessToken, {
     ...baseCookieOptions,
-    maxAge: 60 * 60 * 1000, // 1 hour
+    maxAge: accessMaxAge,
   });
 };
 
