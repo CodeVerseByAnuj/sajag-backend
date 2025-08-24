@@ -1,8 +1,8 @@
 import { Response } from "express";
 import { z } from "zod";
-import { AuthRequest } from "../middlewares/auth.middleware";
-import { CustomerService } from "../services/customer.service";
-import { sendSuccessResponse } from "../utils/sendSuccessResponse";
+import { AuthRequest } from "../middlewares/auth.middleware.js";
+import { CustomerService } from "../services/customer.service.js";
+import { sendSuccessResponse } from "../utils/sendSuccessResponse.js";
 
 const customerService = new CustomerService();
 

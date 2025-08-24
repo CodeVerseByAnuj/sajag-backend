@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { PrismaClient } from "@prisma/client";
-import { generateAccessToken, generateRefreshToken ,verifyRefreshToken } from "../utils/jwt.util";
-import { sendVerificationEmail } from "../utils/mail.util";
+import { generateAccessToken, generateRefreshToken ,verifyRefreshToken } from "../utils/jwt.util.js";
+import { sendVerificationEmail } from "../utils/mail.util.js";
 
 const prisma = new PrismaClient();
 const MAX_LOGIN_ATTEMPTS = 5;

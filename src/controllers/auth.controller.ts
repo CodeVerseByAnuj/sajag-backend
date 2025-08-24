@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { AuthService } from "../services/auth.service";
-import { sendSuccessResponse } from "../utils/sendSuccessResponse";
-import { setAuthCookies, setAccessTokenCookie, clearAuthCookies } from "../utils/cookieHelper.utils";
+import { AuthService } from "../services/auth.service.js";
+import { sendSuccessResponse } from "../utils/sendSuccessResponse.js";
+import { setAuthCookies, setAccessTokenCookie, clearAuthCookies } from "../utils/cookieHelper.utils.js";
 
 const authService = new AuthService();
 

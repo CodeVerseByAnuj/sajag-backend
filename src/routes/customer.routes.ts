@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { CustomerController } from "../controllers/customer.controller";
-import { authenticateToken } from "../middlewares/auth.middleware";
-import { requireEmailVerification } from "../middlewares/verifyEmail.middleware";
-import { customerLimiter } from "../middlewares/rateLimiter.middleware";
-import { upload } from "../utils/multer.util";
+import { CustomerController } from "../controllers/customer.controller.js";
+import { authenticateToken } from "../middlewares/auth.middleware.js";
+import { requireEmailVerification } from "../middlewares/verifyEmail.middleware.js";
+import { customerLimiter } from "../middlewares/rateLimiter.middleware.js";
+import { upload } from "../utils/multer.util.js";
 
 const router = Router();
 const customerController = new CustomerController();

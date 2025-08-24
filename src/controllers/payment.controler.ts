@@ -1,8 +1,8 @@
 import { Response } from "express";
 import { z } from "zod";
-import { AuthRequest } from "../middlewares/auth.middleware";
-import { applyPayment, getPaymentHistory, calculateStandaloneInterest, getCurrentInterestStatus } from "../services/payment.service";
-import { sendSuccessResponse } from "../utils/sendSuccessResponse";
+import { AuthRequest } from "../middlewares/auth.middleware.js";
+import { applyPayment, getPaymentHistory, calculateStandaloneInterest, getCurrentInterestStatus } from "../services/payment.service.js";
+import { sendSuccessResponse } from "../utils/sendSuccessResponse.js";
 
 const paymentSchema = z.object({
   itemId: z.string().min(1, "Item ID is required"),

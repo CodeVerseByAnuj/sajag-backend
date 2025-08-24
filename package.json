@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-alias && tsc-esm-fix dist",
     "start": "node dist/index.js",
     "test": "vitest --run",
     "typecheck": "tsc --noEmit",
@@ -40,6 +40,8 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^22.5.5",
     "@types/nodemailer": "^6.4.14",
+    "tsc-alias": "^1.8.16",
+    "tsc-esm-fix": "^3.1.2",
     "tsx": "^4.7.0",
     "typescript": "^5.5.3",
     "vitest": "^3.1.4"

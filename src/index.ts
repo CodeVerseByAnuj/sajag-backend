@@ -1,4 +1,5 @@
 import { createApp, prisma } from "./app.js";
+export const createServer = createApp;
 import { env } from "./config/env.js";
 
 const port = env.PORT;

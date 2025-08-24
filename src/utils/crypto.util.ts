@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { env } from "../config/env";
+import { env } from "../config/env.js";
 
 const algorithm = "aes-256-cbc";
 const key = Buffer.from(env.ENCRYPTION_KEY, "utf8");

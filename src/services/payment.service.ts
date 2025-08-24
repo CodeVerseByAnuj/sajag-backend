@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { calculateInterest } from '../utils/interest.utils'
+import { calculateInterest } from '../utils/interest.utils.js'
 import { object } from 'zod';
 
 const prisma = new PrismaClient();

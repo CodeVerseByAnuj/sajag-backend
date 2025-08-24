@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { ItemController } from "../controllers/item.controller";
-import { authenticateToken } from "../middlewares/auth.middleware";
-import { PaymentController } from '../controllers/payment.controler';
+import { ItemController } from "../controllers/item.controller.js";
+import { authenticateToken } from "../middlewares/auth.middleware.js";
+import { PaymentController } from '../controllers/payment.controler.js';
 
 
 const router = Router();
