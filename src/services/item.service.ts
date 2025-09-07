@@ -103,7 +103,7 @@ export class ItemService {
     sortOrder: "asc" | "desc" = "desc"
   ) {
     // ✅ Validate customer access
-    const customer = await prisma.customer.findFirst({
+    const customer = await prisma.customer.findUnique({
       where: {
         id: customerId,
         userId,
@@ -115,10 +115,13 @@ export class ItemService {
     }
 
     const items = await prisma.item.findMany({
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
-    });
+    where: {
+      customerId,
+    },
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+  });
 
     const decrypted = items.map((item) => ({
       id: item.id,
