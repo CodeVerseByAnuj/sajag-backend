@@ -1,6 +1,7 @@
 import { createApp, prisma } from "./app.js";
 export const createServer = createApp;
 import { env } from "./config/env.js";
+import { initializeSchedulers } from "./scheduler/index.js";
 
 const port = env.PORT;
 
@@ -16,6 +17,9 @@ prisma
       console.log(`🚀 Backend server running on port ${port}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
       console.log(`🏥 Health check: http://localhost:${port}/api/health`);
+      
+      // Initialize schedulers after server starts
+      initializeSchedulers();
     });
   })
   .catch((error) => {
