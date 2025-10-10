@@ -44,12 +44,13 @@ export class ItemService {
     }
 
     const encryptedData = {
-      name: encrypt(data.name),
+      // name: encrypt(data.name),
+      name: data.name,
       itemWeight: data.itemWeight,
       category: data.category,
       percentage: data.percentage,
       amount: data.amount,
-      remainingAmount:data.amount,
+      remainingAmount: data.amount,
       interestPaidTill: new Date(),
       imagePath: data.imagePath,
       description: data.description,
@@ -115,17 +116,18 @@ export class ItemService {
     }
 
     const items = await prisma.item.findMany({
-    where: {
-      customerId,
-    },
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
-  });
+      where: {
+        customerId,
+      },
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+    });
 
     const decrypted = items.map((item) => ({
       id: item.id,
-      name: decrypt(item.name),
+      // name: decrypt(item.name),
+      name: item.name,
       category: item.category,
       percentage: item.percentage,
       amount: item.amount,
@@ -169,7 +171,8 @@ export class ItemService {
 
     return {
       id: item.id,
-      name: decrypt(item.name),
+      // name: decrypt(item.name),
+      name: item.name,
       category: item.category,
       percentage: item.percentage,
       amount: item.amount,

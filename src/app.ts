@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.routes.js";
 import customerRoutes from "./routes/customer.routes.js";
 import itemRoutes from "./routes/item.route.js";// Initialize Prisma
 import paymentRoutes from "./routes/payment.router.js";
+import insightsRoutes from "./routes/insights.routes.js";
 
 
 export const prisma = new PrismaClient();
@@ -49,6 +50,7 @@ export const createApp = () => {
   app.use("/api/customer", customerRoutes);
   app.use("/api/item", itemRoutes);
   app.use("/api/payment", paymentRoutes);
+  app.use("/api/insights", insightsRoutes);
 
   // 404 handler for API routes
   app.use("/api/*", (req, res) => {

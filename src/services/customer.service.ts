@@ -18,11 +18,16 @@ export class CustomerService {
   async submitCustomer(userId: string, data: CustomerDataInput) {
     // ✅ Only encrypt sensitive fields, not enums
     const encryptedData = {
-      name: encrypt(data.name),
-      guardianName: encrypt(data.guardianName),
-      address: encrypt(data.address),
-      aadharNumber: encrypt(data.aadharNumber ?? ""),
-      mobileNumber: encrypt(data.mobileNumber ?? ""),
+      // name: encrypt(data.name),
+      // guardianName: encrypt(data.guardianName),
+      // address: encrypt(data.address),
+      // aadharNumber: encrypt(data.aadharNumber ?? ""),
+      // mobileNumber: encrypt(data.mobileNumber ?? ""),
+      name: data.name,
+      guardianName: data.guardianName,
+      address: data.address,
+      aadharNumber: data.aadharNumber ?? "",
+      mobileNumber: data.mobileNumber ?? "",
     };
 
     // 🔒 If customerId is provided, attempt to update
@@ -86,9 +91,12 @@ export class CustomerService {
 
     const decrypted = customers.map((c) => ({
       id: c.id,
-      name: decrypt(c.name),
-      guardianName: decrypt(c.guardianName),
-      address: decrypt(c.address),
+      // name: decrypt(c.name),
+      // guardianName: decrypt(c.guardianName),
+      // address: decrypt(c.address),
+      name: c.name,
+      guardianName: c.guardianName,
+      address: c.address,
       relation: c.relation,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
@@ -113,39 +121,44 @@ export class CustomerService {
     };
   }
 
- async getCustomerById(id: string, userId: string) {
-  if (!id) {
-    console.warn("Customer ID is missing");
-    return null;
+  async getCustomerById(id: string, userId: string) {
+    if (!id) {
+      console.warn("Customer ID is missing");
+      return null;
+    }
+
+    const customer = await prisma.customer.findUnique({
+      where: { id },
+    });
+
+    if (!customer) {
+      console.warn("Customer not found for ID:", id);
+      return null;
+    }
+
+    // ✅ Extra security: ensure customer belongs to logged-in user
+    if (customer.userId !== userId) {
+      console.warn("Customer does not belong to this user");
+      return null;
+    }
+
+    return {
+      id: customer.id,
+      // name: decrypt(customer.name),
+      // guardianName: decrypt(customer.guardianName),
+      // address: decrypt(customer.address),
+      // mobileNumber: decrypt(customer.mobileNumber),
+      // aadharNumber: decrypt(customer.aadharNumber),
+      name: customer.name,
+      guardianName: customer.guardianName,
+      address: customer.address,
+      mobileNumber: customer.mobileNumber,
+      aadharNumber: customer.aadharNumber,
+      relation: customer.relation,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt,
+    };
   }
-
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-  });
-
-  if (!customer) {
-    console.warn("Customer not found for ID:", id);
-    return null;
-  }
-
-  // ✅ Extra security: ensure customer belongs to logged-in user
-  if (customer.userId !== userId) {
-    console.warn("Customer does not belong to this user");
-    return null;
-  }
-
-  return {
-    id: customer.id,
-    name: decrypt(customer.name),
-    guardianName: decrypt(customer.guardianName),
-    address: decrypt(customer.address),
-    mobileNumber: decrypt(customer.mobileNumber),
-    aadharNumber: decrypt(customer.aadharNumber),
-    relation: customer.relation,
-    createdAt: customer.createdAt,
-    updatedAt: customer.updatedAt,
-  };
-}
 
   async deleteCustomer(userId: string, customerId: string) {
     const customer = await prisma.customer.findFirst({
