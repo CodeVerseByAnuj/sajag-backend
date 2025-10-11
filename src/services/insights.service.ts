@@ -1,3 +1,4 @@
+// ...existing code...
 import { PrismaClient } from "@prisma/client";
 import { decrypt } from "../utils/crypto.util.js";
 
@@ -14,6 +15,69 @@ export interface InsightsData {
 }
 
 export class InsightsService {
+  /**
+   * Get daily aggregates for amount and interest for the last `days` days.
+   * Returns an object with labels (YYYY-MM-DD) and two datasets: totalPaid and interestPaid
+   */
+  async getDailyAggregates(userId: string, days = 30) {
+    try {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
+
+      const payments = await prisma.payment.findMany({
+        where: {
+          item: {
+            customer: {
+              userId: userId
+            }
+          },
+          paidAt: {
+            gte: start
+          }
+        },
+        select: {
+          amountPaid: true,
+          interestPaid: true,
+          paidAt: true
+        }
+      });
+
+      // initialize days map with zero values to ensure all days present
+      const labels: string[] = [];
+      const totalsMap: Record<string, { totalPaid: number; interestPaid: number }> = {};
+
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const key = d.toISOString().substr(0, 10); // YYYY-MM-DD
+        labels.push(key);
+        totalsMap[key] = { totalPaid: 0, interestPaid: 0 };
+      }
+
+      payments.forEach(p => {
+        const key = p.paidAt.toISOString().substr(0, 10);
+        if (!totalsMap[key]) {
+          totalsMap[key] = { totalPaid: 0, interestPaid: 0 };
+          labels.push(key);
+        }
+        totalsMap[key].totalPaid += p.amountPaid || 0;
+        totalsMap[key].interestPaid += p.interestPaid || 0;
+      });
+
+      const totalPaidData = labels.map(l => totalsMap[l]?.totalPaid || 0);
+      const interestPaidData = labels.map(l => totalsMap[l]?.interestPaid || 0);
+
+      return {
+        labels,
+        datasets: [
+          { label: 'Total Paid', data: totalPaidData },
+          { label: 'Interest Paid', data: interestPaidData }
+        ]
+      };
+    } catch (error) {
+      console.error('Error fetching daily aggregates:', error);
+      throw new Error('Failed to fetch daily aggregates');
+    }
+  }
   async getInsights(userId: string): Promise<InsightsData> {
     try {
       // Get total customers for this user
@@ -191,5 +255,69 @@ export class InsightsService {
       month,
       ...data
     })).sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  /**
+   * Get monthly aggregates for amount and interest for the last `months` months.
+   * Returns an object with labels (YYYY-MM) and two datasets: totalPaid and interestPaid
+   */
+  async getMonthlyAggregates(userId: string, months = 12) {
+    try {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+
+      const payments = await prisma.payment.findMany({
+        where: {
+          item: {
+            customer: {
+              userId: userId
+            }
+          },
+          paidAt: {
+            gte: start
+          }
+        },
+        select: {
+          amountPaid: true,
+          interestPaid: true,
+          paidAt: true
+        }
+      });
+
+      // initialize months map with zero values to ensure all months present
+      const labels: string[] = [];
+      const totalsMap: Record<string, { totalPaid: number; interestPaid: number }> = {};
+
+      for (let i = months - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = d.toISOString().substr(0, 7); // YYYY-MM
+        labels.push(key);
+        totalsMap[key] = { totalPaid: 0, interestPaid: 0 };
+      }
+
+      payments.forEach(p => {
+        const key = p.paidAt.toISOString().substr(0, 7);
+        if (!totalsMap[key]) {
+          totalsMap[key] = { totalPaid: 0, interestPaid: 0 };
+          labels.push(key);
+        }
+        totalsMap[key].totalPaid += p.amountPaid || 0;
+        totalsMap[key].interestPaid += p.interestPaid || 0;
+      });
+
+      const totalPaidData = labels.map(l => totalsMap[l]?.totalPaid || 0);
+      const interestPaidData = labels.map(l => totalsMap[l]?.interestPaid || 0);
+
+      return {
+        labels,
+        datasets: [
+          { label: 'Total Paid', data: totalPaidData },
+          { label: 'Interest Paid', data: interestPaidData }
+        ]
+      };
+    } catch (error) {
+      console.error('Error fetching monthly aggregates:', error);
+      throw new Error('Failed to fetch monthly aggregates');
+    }
   }
 }
