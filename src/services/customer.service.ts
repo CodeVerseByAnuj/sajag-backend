@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { encrypt, decrypt } from "../utils/crypto.util.js";
-
 const prisma = new PrismaClient();
 
 export interface CustomerDataInput {
@@ -16,18 +15,13 @@ export interface CustomerDataInput {
 
 export class CustomerService {
   async submitCustomer(userId: string, data: CustomerDataInput) {
-    // ✅ Only encrypt sensitive fields, not enums
-    const encryptedData = {
-      // name: encrypt(data.name),
-      // guardianName: encrypt(data.guardianName),
-      // address: encrypt(data.address),
-      // aadharNumber: encrypt(data.aadharNumber ?? ""),
-      // mobileNumber: encrypt(data.mobileNumber ?? ""),
+    // Build payload but do NOT write placeholder values for optional unique fields.
+    // Only include aadharNumber/mobileNumber if explicitly provided (to avoid unique-constraint conflicts).
+    const baseData: any = {
+      // If you want to encrypt later, replace these assignments with encrypt(...)
       name: data.name,
       guardianName: data.guardianName,
       address: data.address,
-      aadharNumber: data.aadharNumber ?? "",
-      mobileNumber: data.mobileNumber ?? "",
     };
 
     // 🔒 If customerId is provided, attempt to update
@@ -40,12 +34,43 @@ export class CustomerService {
       });
 
       if (existingCustomer) {
+        // Only include optional fields in update payload if they were provided in request
+        const updatePayload: any = {
+          ...baseData,
+          relation: data.relation as any,
+        };
+        
+        // Check for duplicate aadharNumber before updating
+        if (typeof data.aadharNumber !== "undefined" && data.aadharNumber) {
+          const duplicateAadhar = await prisma.customer.findFirst({
+            where: {
+              aadharNumber: data.aadharNumber,
+              id: { not: data.customerId }, // Exclude current customer
+            },
+          });
+          if (duplicateAadhar) {
+            throw new Error("Aadhar number already exists for another customer");
+          }
+          updatePayload.aadharNumber = data.aadharNumber;
+        }
+        
+        // Check for duplicate mobileNumber before updating
+        if (typeof data.mobileNumber !== "undefined" && data.mobileNumber) {
+          const duplicateMobile = await prisma.customer.findFirst({
+            where: {
+              mobileNumber: data.mobileNumber,
+              id: { not: data.customerId }, // Exclude current customer
+            },
+          });
+          if (duplicateMobile) {
+            throw new Error("Mobile number already exists for another customer");
+          }
+          updatePayload.mobileNumber = data.mobileNumber;
+        }
+
         const updatedCustomer = await prisma.customer.update({
           where: { id: existingCustomer.id },
-          data: {
-            ...encryptedData,
-            relation: data.relation as any,
-          },
+          data: updatePayload,
         });
 
         return {
@@ -58,12 +83,36 @@ export class CustomerService {
     }
 
     // ➕ Create new customer if no customerId is provided
+    // Check for duplicates before creating
+    if (data.aadharNumber) {
+      const duplicateAadhar = await prisma.customer.findFirst({
+        where: { aadharNumber: data.aadharNumber },
+      });
+      if (duplicateAadhar) {
+        throw new Error("Aadhar number already exists");
+      }
+    }
+    
+    if (data.mobileNumber) {
+      const duplicateMobile = await prisma.customer.findFirst({
+        where: { mobileNumber: data.mobileNumber },
+      });
+      if (duplicateMobile) {
+        throw new Error("Mobile number already exists");
+      }
+    }
+
+    const createPayload: any = {
+      userId,
+      ...baseData,
+      relation: data.relation as any,
+      // Use null for absent optional fields rather than a shared string placeholder
+      aadharNumber: typeof data.aadharNumber !== "undefined" ? data.aadharNumber : null,
+      mobileNumber: typeof data.mobileNumber !== "undefined" ? data.mobileNumber : null,
+    };
+
     const newCustomer = await prisma.customer.create({
-      data: {
-        userId,
-        ...encryptedData,
-        relation: data.relation as any,
-      },
+      data: createPayload,
     });
 
     return {
@@ -71,8 +120,6 @@ export class CustomerService {
       customerId: newCustomer.id,
     };
   }
-
-
 
   async getCustomers(
     userId: string,
