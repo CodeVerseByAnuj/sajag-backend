@@ -36,7 +36,7 @@ export class InsightsService {
           }
         },
         select: {
-          amountPaid: true,
+          principalPaid: true,
           interestPaid: true,
           paidAt: true
         }
@@ -59,7 +59,7 @@ export class InsightsService {
           totalsMap[key] = { totalPaid: 0, interestPaid: 0 };
           labels.push(key);
         }
-        totalsMap[key].totalPaid += p.amountPaid || 0;
+        totalsMap[key].totalPaid += p.principalPaid || 0;
         totalsMap[key].interestPaid += p.interestPaid || 0;
       });
 
@@ -278,7 +278,7 @@ export class InsightsService {
           }
         },
         select: {
-          amountPaid: true,
+          principalPaid: true,
           interestPaid: true,
           paidAt: true
         }
@@ -301,7 +301,7 @@ export class InsightsService {
           totalsMap[key] = { totalPaid: 0, interestPaid: 0 };
           labels.push(key);
         }
-        totalsMap[key].totalPaid += p.amountPaid || 0;
+        totalsMap[key].totalPaid += p.principalPaid || 0;
         totalsMap[key].interestPaid += p.interestPaid || 0;
       });
 
