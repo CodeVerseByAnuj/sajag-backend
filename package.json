@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
   "dev": "tsx watch src/index.ts",
-   "build": "npx prisma db push --accept-data-loss && tsc",
+   "build": "npx prisma db push --accept-data-loss && tsc && npx tsc-esm-fix dist",
     "start": "node dist/index.js",
     "test": "vitest --run",
     "typecheck": "tsc --noEmit",
