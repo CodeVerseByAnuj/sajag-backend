@@ -25,12 +25,9 @@ jobs:
       - name: Build backend
         run: npm run build
 
-      # 5️⃣ Start or restart backend via PM2
-      - name: Start/Restart Backend
-        run: |
-          # If process doesn't exist, start it
-          pm2 describe sajag-backend || pm2 start npm --name "sajag-backend" -- run start
-          # Restart to pick up latest code
-          pm2 restart sajag-backend
-          # Save PM2 process list for auto-start on reboot
-          pm2 save
+     - name: Start/Restart Backend
+  run: |
+    cd /home/ubuntu/actions-runner/_work/sajag-backend/sajag-backend
+    pm2 describe sajag-backend || pm2 start dist/index.js --name "sajag-backend"
+    pm2 restart sajag-backend
+    pm2 save
