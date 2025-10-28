@@ -1,5 +1,5 @@
-import { initializeBackupScheduler, performBackup } from './backup.scheduler';
-import { initializePrismaBackupScheduler, performPrismaBackup } from './prisma-backup.scheduler';
+import { initializeBackupScheduler, performBackup } from './backup.scheduler.js';
+import { initializePrismaBackupScheduler, performPrismaBackup } from './prisma-backup.scheduler.js';
 
 // Initialize all schedulers
 export function initializeSchedulers(): void {
