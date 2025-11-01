@@ -6,31 +6,34 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted   # Use your EC2 self-hosted runner
+    runs-on: self-hosted   # EC2 self-hosted runner
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Install dependencies
+      # 2️⃣ Create .env file from GitHub secret
+      - name: Create .env file
+        run: |
+          echo "${{ secrets.PROD_ENV_FILE }}" > .env
+          echo "✅ .env file created successfully"
+
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 3️⃣ Sync Prisma DB
+      # 4️⃣ Sync Prisma DB (will read DATABASE_URL from .env)
       - name: Sync Prisma DB
         run: npx prisma db push --accept-data-loss
 
-      # 4️⃣ Build backend
+      # 5️⃣ Build backend
       - name: Build backend
         run: npm run build
 
-      # 5️⃣ Start or restart backend via PM2
+      # 6️⃣ Start or restart backend with PM2
       - name: Start/Restart Backend
         run: |
-          # If process doesn't exist, start it
           pm2 describe sajag-backend || pm2 start npm --name "sajag-backend" -- run start
-          # Restart to pick up latest code
           pm2 restart sajag-backend
-          # Save PM2 process list for auto-start on reboot
           pm2 save

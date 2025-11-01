@@ -1,5 +1,5 @@
 -- Sajag Database Schema Backup
--- Created: 2025-10-07T11:57:46.355Z
+-- Created: 2025-10-30T20:30:00.024Z
 -- Source: Prisma Schema
 -- =====================================
 
