@@ -7,9 +7,6 @@ on:
 jobs:
   build-and-deploy:
     runs-on: self-hosted   # EC2 self-hosted runner
-    # Provide critical env vars from repository secrets so tools like Prisma can access them
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
       # 1️⃣ Checkout repository
@@ -19,7 +16,7 @@ jobs:
       # 2️⃣ Create .env file from GitHub secret
       - name: Create .env file
         run: |
-          echo "${{ secrets.PROD_ENV_FILE }}" > .env
+          echo "${{ secrets.env }}" > .env
           echo "✅ .env file created successfully"
 
       # 3️⃣ Install dependencies
