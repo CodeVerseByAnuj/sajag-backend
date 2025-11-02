@@ -23,9 +23,13 @@ export const createApp = () => {
   app.use(cookieParser()); // ✅ Required to access req.cookies
   app.use(
     cors({
-      origin: env.CLIENT_URL,
+      origin: [
+        "https://sajagjewellers.in",
+        "https://www.sajagjewellers.in",
+        "http://localhost:3000"
+      ],
       credentials: true,
-    }),
+    })
   );
 
   // Rate limiting
