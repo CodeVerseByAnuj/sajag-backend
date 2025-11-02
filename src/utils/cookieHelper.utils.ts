@@ -6,6 +6,7 @@ const baseCookieOptions: CookieOptions = {
   httpOnly: true,
   secure: isProduction,
   sameSite: isProduction ? "none" : "lax",
+  domain: isProduction ? ".sajagjewellers.in" : "localhost", // <-- ADD THIS
 };
 
 export const setAuthCookies = (
