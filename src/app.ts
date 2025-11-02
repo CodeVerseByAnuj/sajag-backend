@@ -32,7 +32,7 @@ export const createApp = () => {
     })
   );
 
-  // Rate limiting
+  // Rate limiting 
   // app.use(generalLimiter);
 
   // Body parsing
