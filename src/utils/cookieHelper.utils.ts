@@ -1,13 +1,17 @@
 import { Response, CookieOptions } from "express";
+import { object } from "zod";
 
 const isProduction = process.env.NODE_ENV === "production";
 
 const baseCookieOptions: CookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
-  domain: isProduction ? ".sajagjewellers.in" : "localhost", // <-- ADD THIS
+  httpOnly: true,                  // ✅ prevent access from JS (for security)
+  secure: true,                    // ✅ cookie only sent over HTTPS
+  sameSite: "none",                // ✅ allow cross-subdomain cookie sharing
+  domain: ".sajagjewellers.in",    // ✅ make it valid for both frontend + backend
 };
+
+
+console.log(isProduction ? "Running in production mode" : "Running in development mode");
 
 export const setAuthCookies = (
   res: Response,
